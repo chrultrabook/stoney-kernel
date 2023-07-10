@@ -125,7 +125,7 @@ function build_kernel {
 
 # if an argument is passed to the script, build that variant. otherwise build each variant
 if [[ -n $1 ]]; then
-    variant = $1
+    variant=$1
     build_kernel $variant
 else
     for variant in ${variants[@]}; do
