@@ -16,6 +16,13 @@ function build_kernel {
         stoney)
             branch=master
 	    arch=x86_64
+
+	    # Install amdgpu firmware
+	    firmware_dir=${build_dir}/${variant}/stoney_firmware
+	    mkdir -p ${firmware_dir}/amdgpu
+	    cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
+	    # doesn't matter if xz fails
+	    xz -d ${firmware_dir}/amdgpu/stoney* &> /dev/null || true
 	    ;;
 	avs)
 	    branch=avs
