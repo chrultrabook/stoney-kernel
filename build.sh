@@ -55,6 +55,9 @@ function build_kernel {
         cd $kernel_source_dir
         patch -p1 < ../patches/stoney/*
     else
+        if [[ ! -d ${kernel_source_dir}/.git ]]; then
+            rm -rf $kernel_source_dir
+        fi
         if [[ ! -d $kernel_source_dir ]]; then
             git clone $kernel_source_url $kernel_source_dir
         fi
