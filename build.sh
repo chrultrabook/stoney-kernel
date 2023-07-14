@@ -53,6 +53,7 @@ function build_kernel {
         rm linux-${stoney_ver}.tar.xz
         mv linux-${stoney_ver} $kernel_source_dir
         cd $kernel_source_dir
+        patch -p1 < ../patches/stoney/*
     else
         if [[ ! -d $kernel_source_dir ]]; then
             git clone $kernel_source_url $kernel_source_dir
