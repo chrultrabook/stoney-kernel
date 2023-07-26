@@ -14,7 +14,7 @@ function build_kernel {
     variant=$1
     case $variant in
         stoney)
-            branch=master
+      stoney_ver=6.4.6
 	    arch=x86_64
 
 	    # Install amdgpu firmware
@@ -44,12 +44,27 @@ function build_kernel {
 
     echo "Building $variant kernel"
 
-    if [[ ! -d $kernel_source_dir ]]; then
-        git clone $kernel_source_url $kernel_source_dir
+    if [[ $variant == 'stoney' ]]; then
+        if [[ -d $kernel_source_dir ]]; then
+            rm -rf $kernel_source_dir
+        fi
+        curl -LO https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${stoney_ver}.tar.xz
+        tar xf linux-${stoney_ver}.tar.xz
+        rm linux-${stoney_ver}.tar.xz
+        mv linux-${stoney_ver} $kernel_source_dir
+        cd $kernel_source_dir
+        patch -p1 < ../patches/stoney/*
+    else
+        if [[ ! -d ${kernel_source_dir}/.git ]]; then
+            rm -rf $kernel_source_dir
+        fi
+        if [[ ! -d $kernel_source_dir ]]; then
+            git clone $kernel_source_url $kernel_source_dir
+        fi
+        cd $kernel_source_dir
+        git switch $branch
     fi
-    cd $kernel_source_dir
-    git switch $branch
-
+    
     # make sure source is clean from any previous builds
     make clean
 
