@@ -2,23 +2,25 @@
 
 set -e
 
-kernel_source_dir=$PWD/linux
-kernel_source_url='https://github.com/chrultrabook/linux'
 kernel_config_dir=$PWD/config
+source_dir=$PWD/source
 build_dir=$PWD/build
 
-# each variant has a different config, branch, arch, etc
+kernel_version="6.4.6"
+tarball_url="https://cdn.kernel.org/pub/linux/kernel/v${kernel_version:0:1}.x/linux-${kernel_version}.tar.xz"
+tarball_name="$(echo $tarball_url | cut -f 8 -d '/')"
+
+# each variant has a different config, branch, arch, patch set, etc
 variants=('stoney' 'avs' 'mt8173')
 
 function build_kernel {
     variant=$1
     case $variant in
         stoney)
-      stoney_ver=6.4.6
 	    arch=x86_64
 
 	    # Install amdgpu firmware
-	    firmware_dir=${build_dir}/${variant}/stoney_firmware
+	    firmware_dir=${source_dir}/${variant}/stoney_firmware
 	    mkdir -p ${firmware_dir}/amdgpu
 	    cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
 	    # doesn't matter if decompression fails
@@ -26,15 +28,15 @@ function build_kernel {
 	    zstd -d ${firmware_dir}/amdgpu/stoney* &> /dev/null || true
 	    ;;
 	avs)
-	    branch=avs
 	    arch=x86_64
 	    ;;
 	mt8173)
-	    branch=linux-mt8173
+	    tarball_url=""
 	    arch=arm64
 	    ;;
     esac
 
+    kernel_source_dir=${source_dir}/${variant}/linux-${kernel_version}
     output_dir=${build_dir}/${variant}
     module_dir=${output_dir}/modules
     header_dir=${output_dir}/headers
@@ -44,29 +46,10 @@ function build_kernel {
 
     echo "Building $variant kernel"
 
-    if [[ $variant == 'stoney' ]]; then
-        if [[ -d $kernel_source_dir ]]; then
-            rm -rf $kernel_source_dir
-        fi
-        curl -LO https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${stoney_ver}.tar.xz
-        tar xf linux-${stoney_ver}.tar.xz
-        rm linux-${stoney_ver}.tar.xz
-        mv linux-${stoney_ver} $kernel_source_dir
-        cd $kernel_source_dir
-        patch -p1 < ../patches/stoney/*
-    else
-        if [[ ! -d ${kernel_source_dir}/.git ]]; then
-            rm -rf $kernel_source_dir
-        fi
-        if [[ ! -d $kernel_source_dir ]]; then
-            git clone $kernel_source_url $kernel_source_dir
-        fi
-        cd $kernel_source_dir
-        git switch $branch
-    fi
-    
-    # make sure source is clean from any previous builds
-    make clean
+    curl -LO tarball_url -o ${source_dir}/${variant}/${tarball_name}
+    tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
+    cd $kernel_source_dir
+    patch -p1 < ../patches/${variant}/*
 
     case $arch in
         arm64) cross="aarch64-linux-gnu-";;
