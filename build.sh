@@ -46,7 +46,7 @@ function build_kernel {
 
     echo "Building $variant kernel"
 
-    curl -LO tarball_url -o ${source_dir}/${variant}/${tarball_name}
+    curl -LO $tarball_url -o ${source_dir}/${variant}/${tarball_name}
     tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
     cd $kernel_source_dir
     patch -p1 < ../patches/${variant}/*
