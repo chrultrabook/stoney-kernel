@@ -5,8 +5,9 @@ set -e
 kernel_config_dir=$PWD/config
 source_dir=$PWD/source
 build_dir=$PWD/build
+patches_dir=$PWD/patches
 
-kernel_version="6.4.6"
+kernel_version="6.4.8"
 tarball_url="https://cdn.kernel.org/pub/linux/kernel/v${kernel_version:0:1}.x/linux-${kernel_version}.tar.xz"
 tarball_name="$(echo $tarball_url | cut -f 8 -d '/')"
 
@@ -24,8 +25,14 @@ function build_kernel {
 	    mkdir -p ${firmware_dir}/amdgpu
 	    cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
 	    # doesn't matter if decompression fails
-	    xz -d ${firmware_dir}/amdgpu/stoney* &> /dev/null || true
-	    zstd -d ${firmware_dir}/amdgpu/stoney* &> /dev/null || true
+      xz_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.xz 2>/dev/null | wc -l`
+      zst_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.zst 2>/dev/null | wc -l`
+	    if [ $xz_count != 0 ]; then
+        xz -d ${firmware_dir}/amdgpu/stoney*.xz &> /dev/null || true
+      fi
+	    if [ $zst_count != 0 ]; then
+        zstd -d ${firmware_dir}/amdgpu/stoney*.zst &> /dev/null || true
+      fi
 	    ;;
 	avs)
 	    arch=x86_64
@@ -46,10 +53,10 @@ function build_kernel {
 
     echo "Building $variant kernel"
 
-    curl -LO $tarball_url -o ${source_dir}/${variant}/${tarball_name}
+    curl -L $tarball_url -o ${source_dir}/${variant}/${tarball_name}
     tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
     cd $kernel_source_dir
-    patch -p1 < ../patches/${variant}/*
+    patch -p1 < ${patches_dir}/${variant}/* &> /dev/null || true
 
     case $arch in
         arm64) cross="aarch64-linux-gnu-";;
