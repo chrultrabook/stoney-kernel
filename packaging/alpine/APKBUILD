@@ -1,0 +1,22 @@
+_variant=VARIANT
+_kernelver=KERNELVERLONG
+pkgname=linux-${_variant}
+pkgver=KERNELVER
+arch=KERNELARCH
+url="https://chrultrabook.github.io/docs/"
+pkgrel=0
+pkgdesc="The Chrultrabook VARIANT kernel"
+depends="initramfs-generator"
+makedepends="tar xz"
+options="!strip !check"
+license="GPL-2.0"
+source="kernel.tar.xz"
+
+package() {
+	install -D -m755 ${srcdir}/System.map ${pkgdir}/boot/System.map-${_variant}
+	install -D -m755 ${srcdir}/config ${pkgdir}/boot/config-${_variant}
+	install -D -m755 ${srcdir}/vmlinuz ${pkgdir}/boot/vmlinuz-${_variant}
+	install -D -m644 ${srcdir}/kernel.release ${pkgdir}/usr/share/kernel/${_variant}/kernel.release
+	mkdir -p ${pkgdir}/lib/modules
+	cp -r ${srcdir}/modules/lib/modules/${_kernelver} ${pkgdir}/lib/modules
+}
