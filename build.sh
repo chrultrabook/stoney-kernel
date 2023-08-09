@@ -7,7 +7,7 @@ source_dir=$PWD/source
 build_dir=$PWD/build
 patches_dir=$PWD/patches
 
-kernel_version="6.4.8"
+kernel_version="6.6.16"
 tarball_url="https://cdn.kernel.org/pub/linux/kernel/v${kernel_version:0:1}.x/linux-${kernel_version}.tar.xz"
 tarball_name="$(echo $tarball_url | cut -f 8 -d '/')"
 
@@ -57,7 +57,9 @@ function build_kernel {
     curl -L $tarball_url -o ${source_dir}/${variant}/${tarball_name}
     tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
     cd $kernel_source_dir
-    patch -p1 < ${patches_dir}/${variant}/* &> /dev/null || true
+    for f in ${patches_dir}/${variant}/*; do
+        patch -p1 < $f &> /dev/null || true;
+    done
 
     case $arch in
         arm64) cross="aarch64-linux-gnu-";;
