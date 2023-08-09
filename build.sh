@@ -134,6 +134,9 @@ function build_kernel {
         esac
     done < <(find "$header_dir" -type f -perm -u+x ! -name vmlinux -print0)
     strip $header_dir/vmlinux
+
+    # compress all resulting files
+    cd $output_dir; tar -caf kernel.tar.gz *; cd -
 }
 
 # if an argument is passed to the script, build that variant. otherwise build each variant
