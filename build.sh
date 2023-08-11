@@ -53,6 +53,7 @@ function build_kernel {
 
     echo "Building $variant kernel"
 
+    mkdir -p ${source_dir}/${variant}
     curl -L $tarball_url -o ${source_dir}/${variant}/${tarball_name}
     tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
     cd $kernel_source_dir
