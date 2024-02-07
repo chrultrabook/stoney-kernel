@@ -6,67 +6,47 @@ kernel_config_dir=$PWD/config
 source_dir=$PWD/source
 build_dir=$PWD/build
 patches_dir=$PWD/patches
+packaging_dir=$PWD/packaging
 
 kernel_version="6.6.16"
 tarball_url="https://cdn.kernel.org/pub/linux/kernel/v${kernel_version:0:1}.x/linux-${kernel_version}.tar.xz"
 tarball_name="$(echo $tarball_url | cut -f 8 -d '/')"
 
-# each variant has a different config, branch, arch, patch set, etc
-variants=('stoney' 'avs' 'mt8173')
+distros=('alpine' 'none')
 
 function build_kernel {
-    variant=$1
-    case $variant in
-        stoney)
-	    arch=x86_64
+	  arch=x86_64
 
-	    # Install amdgpu firmware
-	    firmware_dir=${source_dir}/${variant}/stoney_firmware
-	    mkdir -p ${firmware_dir}/amdgpu
-	    cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
-	    # doesn't matter if decompression fails
-      xz_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.xz 2>/dev/null | wc -l`
-      zst_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.zst 2>/dev/null | wc -l`
-	    if [ $xz_count != 0 ]; then
-        xz -d ${firmware_dir}/amdgpu/stoney*.xz &> /dev/null || true
-      fi
-	    if [ $zst_count != 0 ]; then
-        zstd -d ${firmware_dir}/amdgpu/stoney*.zst &> /dev/null || true
-      fi
-	    ;;
-	avs)
-	    arch=x86_64
-	    ;;
-	mt8173)
-	    tarball_url=""
-	    arch=arm64
-	    ;;
-    esac
+	  # Install amdgpu firmware
+	  firmware_dir=${source_dir}/stoney_firmware
+	  mkdir -p ${firmware_dir}/amdgpu
+	  cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
+	  # doesn't matter if decompression fails
+    xz_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.xz 2>/dev/null | wc -l`
+    zst_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.zst 2>/dev/null | wc -l`
+	  if [ $xz_count != 0 ]; then
+      xz -d ${firmware_dir}/amdgpu/stoney*.xz &> /dev/null || true
+    fi
+	  if [ $zst_count != 0 ]; then
+      zstd -d ${firmware_dir}/amdgpu/stoney*.zst &> /dev/null || true
+    fi
 
-    kernel_source_dir=${source_dir}/${variant}/linux-${kernel_version}
-    output_dir=${build_dir}/${variant}
+    kernel_source_dir=${source_dir}/linux-${kernel_version}
+    output_dir=${build_dir}
     module_dir=${output_dir}/modules
     header_dir=${output_dir}/headers
-    case $arch in
-        arm*) dtbs_dir=${output_dir}/dtbs ;;
-    esac
 
-    echo "Building $variant kernel"
+    echo "Building kernel"
 
-    mkdir -p ${source_dir}/${variant}
-    curl -L $tarball_url -o ${source_dir}/${variant}/${tarball_name}
-    tar xf ${source_dir}/${variant}/${tarball_name} -C ${source_dir}/${variant}/
+    curl -L $tarball_url -o ${source_dir}/${tarball_name}
+    tar xf ${source_dir}/${tarball_name} -C ${source_dir}/
     cd $kernel_source_dir
-    for f in ${patches_dir}/${variant}/*; do
+    for f in ${patches_dir}/*; do
         patch -p1 < $f &> /dev/null || true;
     done
 
-    case $arch in
-        arm64) cross="aarch64-linux-gnu-";;
-    esac
-
-    # install config for variant
-    cp ${kernel_config_dir}/${variant}.config .config
+    # install config
+    cp ${kernel_config_dir}/config .config
     make CROSS_COMPILE=$cross ARCH=$arch olddefconfig
 
     # build kernel and modules
@@ -74,11 +54,7 @@ function build_kernel {
 
     # install build files to output dir
     mkdir -p $output_dir
-    case $arch in
-        arm*) install_cmd="zinstall dtbs_install";;
-	*) install_cmd="install";;
-    esac
-    make modules_install $install_cmd \
+    make modules_install install \
 	    ARCH=$arch \
             INSTALL_MOD_PATH=$module_dir \
 	    INSTALL_MOD_STRIP=1 \
@@ -142,12 +118,51 @@ function build_kernel {
     cd $output_dir; tar -caf kernel.tar.gz *; cd -
 }
 
-# if an argument is passed to the script, build that variant. otherwise build each variant
+function package_kernel {
+    distro=$1
+
+    # determine which container tools are available
+    if command -v podman &> /dev/null; then
+        container=podman
+    elif command -v docker &> /dev/null; then
+        container=docker
+        if [ "$EUID" -e 0 ] || id -nG "$USER" | grep -qw "docker"; then
+            elevate=""
+        elif command -v sudo &> /dev/null; then
+            elevate=sudo
+        elif command -v doas &> /dev/null; then
+            elevate=doas
+        else
+            echo "Can't elevate to root privileges and user is not in the Docker group. Skipping packaging"
+            return
+        fi
+    else
+        echo "No suitable container tool found. Skipping packaging"
+        return
+    fi
+
+    case $distro in
+    alpine)
+        package_dir=${packaging_dir}/alpine/pkg/community/linux-chrultrabook-stoney/
+        cp ${build_dir}/kernel.tar.gz ${package_dir}
+        cp ${package_dir}/APKBUILD.template ${package_dir}/APKBUILD
+        sed -i "s/KERNELVER/${kernel_version}/g" ${package_dir}/APKBUILD
+        $elevate $container run --rm \
+            --platform linux/x86_64 \
+            -v ${packaging_dir}/alpine:/stoney:z \
+            -it alpine \
+            /stoney/steps.sh $USER
+        $elevate chown -R $USER:$USER packaging/
+    ;;
+}
+
+build_kernel
+# if an argument is passed to the script, package for that distro. otherwise package for each distro
 if [[ -n $1 ]]; then
-    variant=$1
-    build_kernel $variant
+    distro=$1
+    package_kernel $distro
 else
-    for variant in ${variants[@]}; do
-        build_kernel $variant
+    for distro in ${distros[@]}; do
+        package_kernel $distro;
     done
 fi

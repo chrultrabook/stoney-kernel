@@ -1,2 +1,8 @@
 build/
 source/
+packaging/alpine/pkg/
+packaging/alpine/keys/
+packaging/alpine/src/community/linux-chrultrabook-stoney/APKBUILD
+packaging/alpine/src/community/linux-chrultrabook-stoney/kernel.tar.gz
+packaging/alpine/src/community/linux-chrultrabook-stoney/src/
+packaging/alpine/src/community/linux-chrultrabook-stoney/pkg/
