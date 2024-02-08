@@ -1,3 +1,3 @@
-usage: ./build.sh <variant>
-possible variants are: avs, stoney, mt8173
-if no variant is specified, all will be built
+usage: ./build.sh <distro>
+possible distros are: alpine, none
+if no distro is specified, all will be packaged
