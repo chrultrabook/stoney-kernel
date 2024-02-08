@@ -154,6 +154,7 @@ function package_kernel {
             /stoney/steps.sh $USER
         $elevate chown -R $USER:$USER packaging/
     ;;
+    esac
 }
 
 build_kernel
