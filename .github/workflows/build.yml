@@ -17,7 +17,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt update; sudo apt install -y git build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison binutils
+        run: sudo apt update; sudo apt install -y git build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison binutils linux-firmware
       - name: Build kernel
         run: bash build.sh
       - name: Upload build artifacts
