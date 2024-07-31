@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt update; sudo apt install -y git build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison binutils linux-firmware
       - name: Build kernel
-        run: bash build.sh
+        run: bash build.sh none
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
