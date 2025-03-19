@@ -1,110 +1,90 @@
-From 505e384212e123959ece829ca9b20bf6822a0f56 Mon Sep 17 00:00:00 2001
-From: Lux Aliaga <lux@nixgoat.me>
-Date: Wed, 4 Oct 2023 01:11:07 -0300
-Subject: [PATCH] Revert "ASoC: dwc: add DMA handshake control"
-
-This reverts commit a42e988b6265dcd489feb1adab8551b40c988f43.
----
- sound/soc/dwc/dwc-i2s.c | 50 +++--------------------------------------
- sound/soc/dwc/local.h   |  6 -----
- 2 files changed, 3 insertions(+), 53 deletions(-)
-
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_acp.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_acp.c
+index deb0785350e8..248aea841b22 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_acp.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_acp.c
+@@ -410,30 +410,34 @@ static int acp_hw_init(struct amdgpu_ip_block *ip_block)
+ 		adev->acp.acp_res[4].end = adev->acp.acp_res[4].start;
+ 
+ 		adev->acp.acp_cell[0].name = "acp_audio_dma";
++		adev->acp.acp_cell[0].id = 0;
+ 		adev->acp.acp_cell[0].num_resources = 5;
+ 		adev->acp.acp_cell[0].resources = &adev->acp.acp_res[0];
+ 		adev->acp.acp_cell[0].platform_data = &adev->asic_type;
+ 		adev->acp.acp_cell[0].pdata_size = sizeof(adev->asic_type);
+ 
+ 		adev->acp.acp_cell[1].name = "designware-i2s";
++		adev->acp.acp_cell[1].id = 1;
+ 		adev->acp.acp_cell[1].num_resources = 1;
+ 		adev->acp.acp_cell[1].resources = &adev->acp.acp_res[1];
+ 		adev->acp.acp_cell[1].platform_data = &i2s_pdata[0];
+ 		adev->acp.acp_cell[1].pdata_size = sizeof(struct i2s_platform_data);
+ 
+ 		adev->acp.acp_cell[2].name = "designware-i2s";
++		adev->acp.acp_cell[2].id = 2;
+ 		adev->acp.acp_cell[2].num_resources = 1;
+ 		adev->acp.acp_cell[2].resources = &adev->acp.acp_res[2];
+ 		adev->acp.acp_cell[2].platform_data = &i2s_pdata[1];
+ 		adev->acp.acp_cell[2].pdata_size = sizeof(struct i2s_platform_data);
+ 
+ 		adev->acp.acp_cell[3].name = "designware-i2s";
++		adev->acp.acp_cell[3].id = 3;
+ 		adev->acp.acp_cell[3].num_resources = 1;
+ 		adev->acp.acp_cell[3].resources = &adev->acp.acp_res[3];
+ 		adev->acp.acp_cell[3].platform_data = &i2s_pdata[2];
+ 		adev->acp.acp_cell[3].pdata_size = sizeof(struct i2s_platform_data);
+ 
+-		r = mfd_add_hotplug_devices(adev->acp.parent, adev->acp.acp_cell, ACP_DEVS);
++		r = mfd_add_devices(adev->acp.parent, 0, adev->acp.acp_cell, ACP_DEVS, NULL, 0, NULL);
+ 		if (r)
+ 			goto failure;
+ 
+diff --git a/sound/soc/amd/acp-da7219-max98357a.c b/sound/soc/amd/acp-da7219-max98357a.c
+index 02b04f355ca6..42aa009c4e13 100644
+--- a/sound/soc/amd/acp-da7219-max98357a.c
++++ b/sound/soc/amd/acp-da7219-max98357a.c
+@@ -517,11 +517,11 @@ static const struct snd_soc_ops cz_rt5682_dmic1_cap_ops = {
+ };
+ 
+ SND_SOC_DAILINK_DEF(designware1,
+-	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.1.auto")));
++	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.1")));
+ SND_SOC_DAILINK_DEF(designware2,
+-	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.2.auto")));
++	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.2")));
+ SND_SOC_DAILINK_DEF(designware3,
+-	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.3.auto")));
++	DAILINK_COMP_ARRAY(COMP_CPU("designware-i2s.3")));
+ 
+ SND_SOC_DAILINK_DEF(dlgs,
+ 	DAILINK_COMP_ARRAY(COMP_CODEC("i2c-DLGS7219:00", "da7219-hifi")));
+@@ -533,7 +533,7 @@ SND_SOC_DAILINK_DEF(adau,
+ 	DAILINK_COMP_ARRAY(COMP_CODEC("ADAU7002:00", "adau7002-hifi")));
+ 
+ SND_SOC_DAILINK_DEF(platform,
+-	DAILINK_COMP_ARRAY(COMP_PLATFORM("acp_audio_dma.0.auto")));
++	DAILINK_COMP_ARRAY(COMP_PLATFORM("acp_audio_dma.0")));
+ 
+ static struct snd_soc_dai_link cz_dai_7219_98357[] = {
+ 	{
 diff --git a/sound/soc/dwc/dwc-i2s.c b/sound/soc/dwc/dwc-i2s.c
-index 9ea4be56d3b7..46e4d9e8fafa 100644
+index 57b789d7fbed..4dee659b29d0 100644
 --- a/sound/soc/dwc/dwc-i2s.c
 +++ b/sound/soc/dwc/dwc-i2s.c
-@@ -151,60 +151,19 @@ static irqreturn_t i2s_irq_handler(int irq, void *dev_id)
- 		return IRQ_NONE;
- }
+@@ -206,6 +206,8 @@ static void i2s_start(struct dw_i2s_dev *dev,
+ 		i2s_enable_dma(dev, substream->stream);
  
--static void i2s_enable_dma(struct dw_i2s_dev *dev, u32 stream)
--{
--	u32 dma_reg = i2s_read_reg(dev->i2s_base, I2S_DMACR);
--
--	/* Enable DMA handshake for stream */
--	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
--		dma_reg |= I2S_DMAEN_TXBLOCK;
--	else
--		dma_reg |= I2S_DMAEN_RXBLOCK;
--
--	i2s_write_reg(dev->i2s_base, I2S_DMACR, dma_reg);
--}
--
--static void i2s_disable_dma(struct dw_i2s_dev *dev, u32 stream)
--{
--	u32 dma_reg = i2s_read_reg(dev->i2s_base, I2S_DMACR);
--
--	/* Disable DMA handshake for stream */
--	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
--		dma_reg &= ~I2S_DMAEN_TXBLOCK;
--		i2s_write_reg(dev->i2s_base, I2S_RTXDMA, 1);
--	} else {
--		dma_reg &= ~I2S_DMAEN_RXBLOCK;
--		i2s_write_reg(dev->i2s_base, I2S_RRXDMA, 1);
--	}
--	i2s_write_reg(dev->i2s_base, I2S_DMACR, dma_reg);
--}
--
- static void i2s_start(struct dw_i2s_dev *dev,
- 		      struct snd_pcm_substream *substream)
- {
- 	struct i2s_clk_config_data *config = &dev->config;
- 
--	u32 reg = IER_IEN;
--
--	if (dev->tdm_slots) {
--		reg |= (dev->tdm_slots - 1) << IER_TDM_SLOTS_SHIFT;
--		reg |= IER_INTF_TYPE;
--		reg |= dev->frame_offset << IER_FRAME_OFF_SHIFT;
--	}
--
--	i2s_write_reg(dev->i2s_base, IER, reg);
-+	i2s_write_reg(dev->i2s_base, IER, 1);
-+	i2s_enable_irqs(dev, substream->stream, config->chan_nr);
- 
- 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
- 		i2s_write_reg(dev->i2s_base, ITER, 1);
- 	else
- 		i2s_write_reg(dev->i2s_base, IRER, 1);
- 
--	/* I2S needs to enable IRQ to make a handshake with DMAC on the JH7110 SoC */
--	if (dev->use_pio || dev->is_jh7110)
--		i2s_enable_irqs(dev, substream->stream, config->chan_nr);
--	else
--		i2s_enable_dma(dev, substream->stream);
--
  	i2s_write_reg(dev->i2s_base, CER, 1);
++	// enable irqs anyway
++	i2s_enable_irqs(dev, substream->stream, config->chan_nr);
  }
  
-@@ -218,10 +177,7 @@ static void i2s_stop(struct dw_i2s_dev *dev,
+ static void i2s_stop(struct dw_i2s_dev *dev,
+@@ -222,6 +224,8 @@ static void i2s_stop(struct dw_i2s_dev *dev,
+ 		i2s_disable_irqs(dev, substream->stream, 8);
  	else
- 		i2s_write_reg(dev->i2s_base, IRER, 0);
- 
--	if (dev->use_pio || dev->is_jh7110)
--		i2s_disable_irqs(dev, substream->stream, 8);
--	else
--		i2s_disable_dma(dev, substream->stream);
+ 		i2s_disable_dma(dev, substream->stream);
++	// disable irqs anyway
 +	i2s_disable_irqs(dev, substream->stream, 8);
  
  	if (!dev->active) {
  		i2s_write_reg(dev->i2s_base, CER, 0);
-diff --git a/sound/soc/dwc/local.h b/sound/soc/dwc/local.h
-index dce88c9ad5f3..81eee700c1c2 100644
---- a/sound/soc/dwc/local.h
-+++ b/sound/soc/dwc/local.h
-@@ -69,12 +69,6 @@
- #define I2S_COMP_VERSION	0x01F8
- #define I2S_COMP_TYPE		0x01FC
- 
--#define I2S_RRXDMA		0x01C4
--#define I2S_RTXDMA		0x01CC
--#define I2S_DMACR		0x0200
--#define I2S_DMAEN_RXBLOCK	(1 << 16)
--#define I2S_DMAEN_TXBLOCK	(1 << 17)
--
- /*
-  * Component parameter register fields - define the I2S block's
-  * configuration.
--- 
-2.40.0
-
