@@ -17,20 +17,6 @@ distros=('alpine' 'none')
 function build_kernel {
 	  arch=x86_64
 
-	  # Install amdgpu firmware
-	  firmware_dir=${source_dir}/stoney_firmware
-	  mkdir -p ${firmware_dir}/amdgpu
-	  cp -r /lib/firmware/amdgpu/stoney* ${firmware_dir}/amdgpu
-	  # doesn't matter if decompression fails
-    xz_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.xz 2>/dev/null | wc -l`
-    zst_count=`ls -1 ${firmware_dir}/amdgpu/stoney*.zst 2>/dev/null | wc -l`
-	  if [ $xz_count != 0 ]; then
-      xz -d ${firmware_dir}/amdgpu/stoney*.xz &> /dev/null || true
-    fi
-	  if [ $zst_count != 0 ]; then
-      zstd -d ${firmware_dir}/amdgpu/stoney*.zst &> /dev/null || true
-    fi
-
     kernel_source_dir=${source_dir}/linux-${kernel_version}
     output_dir=${build_dir}
     module_dir=${output_dir}/modules
