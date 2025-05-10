@@ -24,6 +24,7 @@ function build_kernel {
 
     echo "Building kernel"
 
+	mkdir -p ${source_dir}
     curl -L $tarball_url -o ${source_dir}/${tarball_name}
     tar xf ${source_dir}/${tarball_name} -C ${source_dir}/
     cd $kernel_source_dir
